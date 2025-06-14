@@ -1,7 +1,7 @@
 # SDMD
 This repository contains jupyter notebook associated with the manuscript "". The notebooks and associated files contain code needed to reproduce the analysis and figures associated with the modelling aspect of the manuscript.
 
-##Requirements 
+## Requirements 
 Julia 1.9 or above
 Jupyter notebook
 This analysis was performed on macOS Sonoma 14.3, however any system which can run Julia 1.9 should be suitable.
