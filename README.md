@@ -3,7 +3,7 @@ This repository contains jupyter notebook associated with the manuscript "". The
 
 1 Department of Life Sciences, Imperial College London, London, UK.
 
-For correspondence regarding the code: \url{oksana.vertsimakha22@imperial.ac.uk}
+For correspondence regarding the code: oksana.vertsimakha22@imperial.ac.uk
 
 
 
