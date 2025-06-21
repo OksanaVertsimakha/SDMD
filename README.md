@@ -38,7 +38,7 @@ StatsBase v0.34.5
 Random
 Statistics v1.10.0
 ```
-If the packages are installed, the following code should be run o initiate the environment:
+Once the packages are installed, the following code should be run o initiate the environment (should be run at the start of each session):
 ```
 using Pkg
 Pkg.activate("./Environment/")
