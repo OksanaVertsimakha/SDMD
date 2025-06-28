@@ -52,7 +52,7 @@ The code and instructions are also provided in the SDMDSimulations.ipynb file.
 ## User notes
 The SDMDModel.ipynb is a jupyter notebook that contains the code for the model as described in the paper as well as supplementary functions.
 
-The SDMDSimulations.ipynb is a jupyter notebook that contains the code used to generate the figures and sumaltions data used in the modelling results.
+The SDMDSimulations.ipynb is a jupyter notebook that contains the code used to generate the figures and sumaltions data used in the modelling results. IdealisedRuns and EmpiricalRuns data is used to make Figure 1 and Figure 6 from the manuscript respectively.
 
 ## Timing
 Installation is not expected to take more than 5 minutes
