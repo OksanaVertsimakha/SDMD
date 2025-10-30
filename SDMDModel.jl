@@ -1,5 +1,5 @@
 using Pkg
-using Random, Distributions, DataFrames, StatsBase, CairoMakie, ProgressMeter, PrettyTables, JLD2, Integrals
+using Random, Distributions, DataFrames, StatsBase, CairoMakie, ProgressMeter, JLD2, Integrals
 
 
 
@@ -367,3 +367,4 @@ TimePerc=function(n;maxt=300,perc=0.5)
     end
     return first(tt),last(tt),last(tt)-first(tt)
 end
+
