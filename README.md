@@ -22,7 +22,7 @@ using Pkg
 Pkg.add("NBInclude")  
 
 using NBInclude
-@nbinclude("./Environment/Setup0.ipynb");
+@nbinclude("./Environment/Setup.ipynb");
 ```
 The dependencies can also be installed manually:
 ```
