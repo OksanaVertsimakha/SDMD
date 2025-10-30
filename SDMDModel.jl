@@ -199,13 +199,7 @@ E_Make_1=function(;c=0.95,j=0.03,a=0.01,b=0.001,show=false,M=4,title="Gametes pr
             [0 0 0 1/2 1/2],
             [0 0 0 0 1]
             )
-        if show 
-            namesG=["WW","WD","WN","WR","WO","DD","DN","DR","DO","NN","NR","NO", "RR","RO","OO"]
-            namesA=["W","D","N","R","O"]
-            hl_odd = Highlighter( f   = (data,i,j) -> i in [2,6,7,8,9],
-                             crayon = Crayon(background = :light_blue))
-            pretty_table(E5,header=namesA,tf=tf_borderless,row_labels=namesG,highlighters=hl_odd,title=title)
-        end
+
     end
     if M==4
         E5=vcat(
@@ -220,14 +214,7 @@ E_Make_1=function(;c=0.95,j=0.03,a=0.01,b=0.001,show=false,M=4,title="Gametes pr
             [0 0 1/2 1/2 ],
             [0 0 0 1 ]
             )
-        if show 
-            namesG=["WW","WD","WN","WR","DD","DN","DR","NN","NR", "RR"]
-            namesA=["W","D","N","R"]
-            hl_odd = Highlighter( f   = (data,i,j) -> i in [2,5,6,7],
-                                  crayon = Crayon(background = :light_blue))
-            pretty_table(E5,header=namesA,tf=tf_borderless,row_labels=namesG,highlighters=hl_odd,title=title)
 
-        end
     end    
     return transpose(E5)
 end
@@ -367,4 +354,5 @@ TimePerc=function(n;maxt=300,perc=0.5)
     end
     return first(tt),last(tt),last(tt)-first(tt)
 end
+
 
