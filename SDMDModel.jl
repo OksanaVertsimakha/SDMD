@@ -5,41 +5,44 @@ using Random, Distributions, DataFrames, StatsBase, CairoMakie, ProgressMeter, P
 
 # Core model elements
 # Mating model
-function Mating(; Nf, Nm, E, ff, r_sex, beta=0, M2=10, M=4)
-    N_pairs_A = zeros(Int64, M2, M2)
-    N_pairs_Af = zeros(Int64, M2, M2)
+
+Mating = function (; Nf, Nm, E, ff, r_sex, beta=0, M2=10, M=4, tp=Int64,wa=1)
+    # Pre-allocate arrays
+    N_pairs_A = zeros(tp, M2, M2)
+    N_pairs_Af = zeros(tp, M2, M2)
+    N_exp_f = zeros(tp, M2)
+    N_exp_m = zeros(tp, M2)
     
-    Nm_sum = sum(Nm)
-    pAm = ifelse(Nm_sum > 0, Nm / Nm_sum, fill(1 / M2, M2))  # Avoid division by zero
+    Nm_sum = sum(Nm.*wa)
+    if Nm_sum == 0
+        return N_exp_f, N_exp_m  # Early return if no males
+    end
+    pAm = Nm.*wa ./ Nm_sum
     p_beta = Nm_sum / (beta + Nm_sum)
 
-    N_exp_f = zeros(Int64, M2)
-    N_exp_m = zeros(Int64, M2)
-
-    multinomial_dist = [Multinomial(round(Int64, Nf[i] * p_beta), pAm) for i in 1:M2]
-
-    # Sample number of mating pairs for each genotype combination
-    for i in 1:M2
-        rand!(multinomial_dist[i], view(N_pairs_A, i, :))
-    end
-
-    poisson_samples = Vector{Poisson}(undef, M2)
-    for j in 1:M2
-        for i in 1:M2
-            poisson_samples[i] = Poisson(N_pairs_A[i, j] * ff[i,j])
-            N_pairs_Af[i, j] = rand(poisson_samples[i])  # Sample once, reusing distribution
+    # Vectorized mating pair sampling
+    @inbounds for i in 1:M2
+        if Nf[i] > 0
+            n_pairs = round(tp, Nf[i] * p_beta)
+            if n_pairs > 0
+                N_pairs_A[i, :] .= rand(Multinomial(n_pairs, pAm))
+            end
         end
     end
 
-    # Sample offspring production  # i is the females, j is the males
-    for j in 1:M2
-        for i in 1:M2
+    # Vectorized offspring production
+    @inbounds for j in 1:M2, i in 1:M2
+        if N_pairs_A[i, j] > 0
+            # Sample fertile pairs and offspring in one step
+            N_pairs_Af[i, j] = rand(Poisson(N_pairs_A[i, j] * ff[i, j]))
+            
             if N_pairs_Af[i, j] > 0
-                N_exp = rand(Multinomial(N_pairs_Af[i, j], E[i][j]))  # Offspring count
-                N_sx = rand.(Binomial.(N_exp, 1 .- r_sex[j, i]))  # Sex allocation 
-
-                @inbounds N_exp_f .+= N_sx
-                @inbounds N_exp_m .+= (N_exp .- N_sx)
+                N_exp = rand(Multinomial(N_pairs_Af[i, j], E[i][j]))
+                # Sex allocation - vectorized
+                N_sx = rand.(Binomial.(N_exp, 1 .- r_sex[j, i]))
+                
+                N_exp_f .+= N_sx
+                N_exp_m .+= N_exp .- N_sx
             end
         end
     end
@@ -54,52 +57,69 @@ Fitness_change = function (; Nf, Nm, wf, wm, M2=10)
     return Nf_new, Nm_new
 end
 #Density-dependent mortality
-Ddm_change = function (; Nf, Nm, Nh, alpha, M2=10)
-    p = alpha / (Nh + alpha)
-    Nf_new = first.(rand.(Binomial.(Nf, p), 1))
-    Nm_new = first.(rand.(Binomial.(Nm, p), 1))
+Alpha=function(;N, f,phi1=1, phi2=1,tp=Int64)
+    if phi2==1
+        a = (N*f/2)/(phi1*f/2-1)
+    else 
+        a= (N*f/2)/(phi1*f/2-1)^(1/phi2)
+    end
+    return a
+end
+
+ Ddm_change=function(; Nf, Nm, Nh, alpha, M2=10, tp=Int64,phi1=1,phi2=1)
+    p = phi1 / ((Nh/alpha)^phi2 + 1)
+    
+    # Pre-allocate and fill directly
+    Nf_new = Vector{tp}(undef, M2)
+    Nm_new = Vector{tp}(undef, M2)
+    
+    @inbounds for i in 1:M2
+        Nf_new[i] = rand(Binomial(Nf[i], p))
+        Nm_new[i] = rand(Binomial(Nm[i], p))
+    end
+    
     return Nf_new, Nm_new
 end
 
 # Model for 1 generational change
 # Ntfi/Ntmi for total adult population, Ntf/Ntm for fertile adult population, counted per genotype
-Model2 = function (; Nf, Nm, E, wm, wf, alpha::Int64=10^6, ff, r_sex=0.5, beta=1, M2=10, M=4)
-    Nf, Nm = Mating(; Nf=Nf, Nm=Nm, E=E, ff=ff, r_sex=r_sex, beta=beta, M2=M2, M=M)
+Model2 = function (; Nf, Nm, E, wm, wf, alpha=10^6, ff, r_sex=0.5, beta=1, M2=10, M=4,tp=Int64,phi1=1,phi2=1,wa=1)
+    Nf, Nm = Mating(; Nf=Nf, Nm=Nm, E=E, ff=ff, r_sex=r_sex, beta=beta, M2=M2, M=M,tp=tp,wa=wa)
     Nh = sum(Nf .+ Nm)
-    Nf_1, Nm_1 = Ddm_change(; Nf=Nf, Nm=Nm, Nh=Nh, alpha=alpha, M2=M2)[1:2]
+    Nf_1, Nm_1 = Ddm_change(; Nf=Nf, Nm=Nm, Nh=Nh, alpha=alpha, M2=M2,phi1=phi1,phi2=phi2)[1:2]
     Nf_2, Nm_2 = Fitness_change(; Nf=Nf_1, Nm=Nm_1, wf=wf, wm=wm, M2=M2)
-    df = DataFrame(Ntf=Nf_2, Ntm=Nm_2, Ntfi=Nf_1, Ntmi=Nm_1)
-    return df
+    return [Nf_2, Nm_2]#Ntf, Ntm, Ntfi, Ntmi
 end
 
 # Population size input
-Input_nosp = function (; M=4, Nmean=10^5, pm=0.01)
+Input_nosp = function (; M=4, Nmean=10^5, pm=0.01,tp=Int64)
     M2 = Int(M * (M + 1) / 2)
-    Ntf_init = zeros(M2)
-    Ntf_init[1] = Int64(round(Nmean / 2))
-    Ntm_init = zeros(M2)
-    Ntm_init[1] = Int64(round(Nmean / 2))
-    Ntm_init[M+1] = ceil(Int64, Ntm_init[1] * pm)
-    Ntm_init[1] = ceil(Int64, Ntm_init[1] * (1 - pm))
+    Ntf_init = zeros(tp,M2)
+    Ntf_init[1] = tp(round(Nmean / 2))
+    Ntm_init = zeros(tp,M2)
+    Ntm_init[1] = tp(round(Nmean / 2))
+    Ntm_init[M+1] = ceil(tp, Ntm_init[1] * pm)
+    Ntm_init[1] = ceil(tp, Ntm_init[1] * (1 - pm))
     return Ntf_init, Ntm_init
 end
 
 # Full simulations over time. Tracking only cumulative population size by sex
 # Parameters: maxgen=number of generations
 # N=total effective population size
-# beta=parameter of probability of successfully finding a male mate in small population
-#      e.g., p=(number of males)/(number of males+beta). Not used in non-spatial modelling
+# beta=parameter of probability of successfully finding a male mate in small population, e.g., p=(number of males)/(number of males+beta). Not used in non-spatial modelling
 # wmf=fitness and reproduction data, generated by Fitness_input1 function
 # e=gametes production data,  generated by E_Make_1 function
 # alpha=parameter related to density depending mortality. Alpha=0 for equilibrium = N
+# phi1, phi2 are parameters from the density-dependency model (Maynard Smith & Blatkin). When phi1=phi2=1 is equal to the Beverton-Holt model
 # M=4 or M=5 = number of alleles (M=5 for drive with no sex distorter)
 #pm = initial DD drive males release frequency
-function Model_nosp_NT(; N=10^15, pm=0.01, wmf,e, mD_sex, beta=0, alpha=0, maxgen=10, M=4)
-    Ntf_init, Ntm_init = Input_nosp(; M=M, Nmean=N, pm=pm)
+
+ Model_nosp_NT=function(; N=10^15, pm=0.01, wmf,e, mD_sex, beta=0, alpha=0,phi1=1,phi2=1, maxgen=10, Model=2, M=4,tp=Int64,b2=0)
+    Ntf_init, Ntm_init = Input_nosp(; M=M, Nmean=N, pm=pm,tp=tp)
    
     M2 = Int(M * (M + 1) / 2)
     f=wmf[3][1,1]
-    alpha = alpha == 0 ? round(Int64, f * N / (f / 2 - 1) / 2) : alpha
+    alpha = alpha == 0 ? Alpha(phi1=phi1,phi2=phi2, f=f,N=N) : alpha
 
     r_sex = 0.5 .* ones(M2, M2)
     if M == 4
@@ -112,15 +132,17 @@ function Model_nosp_NT(; N=10^15, pm=0.01, wmf,e, mD_sex, beta=0, alpha=0, maxge
             r_sex[i, :] .= mD_sex
         end
     end
+    if b2>0     
+        if M==4 r_sex[7,:] .=0.5 ;end
+        if M==5 r_sex[9,:] .=0.5 ;end
+    end
+    model = Model == 2 ? Model2 : Model1
 
-    model=Model2
-
-    NCountF=Array{Int128}(undef, maxgen)
-    NCountM=Array{Int128}(undef, maxgen)
+    NCountF=Array{tp}(undef, maxgen)
+    NCountM=Array{tp}(undef, maxgen)
 
     
     Ntf, Ntm = copy(Ntf_init), copy(Ntm_init)
-    Ntfi, Ntmi = copy(Ntf_init), copy(Ntm_init)
     NCountF[1]=sum(Ntf_init)
     NCountM[1]=sum(Ntm_init)
 
@@ -129,19 +151,18 @@ function Model_nosp_NT(; N=10^15, pm=0.01, wmf,e, mD_sex, beta=0, alpha=0, maxge
        
         if (NCountM[gen]>1) * (NCountF[gen]>1)> 0
             beta = NCountM[gen] / (NCountM[gen] + beta)
-            m = model(; Nf=Ntf, Nm=Ntm, E=e, alpha=alpha, ff=wmf[3], wm=wmf[1], wf=wmf[2], r_sex=r_sex, beta=beta, M2=M2, M=M)
-            Ntf = m.Ntf
-            Ntm = m.Ntm
-            Ntfi = m.Ntfi
-            Ntmi = m.Ntmi
+            m = model(; Nf=Ntf, Nm=Ntm, E=e, alpha=alpha, ff=wmf[3], wm=wmf[1], wf=wmf[2], r_sex=r_sex,phi1=phi1,phi2=phi2, beta=beta, M2=M2, M=M,tp=tp)
+            Ntf = m[1]
+            Ntm = m[2]
             
         else
-            Ntf, Ntm, Ntfi, Ntmi = zeros(Int64, M2), zeros(Int64, M2), zeros(Int64, M2), zeros(Int64, M2)
+            Ntf, Ntm = zeros(tp, M2), zeros(tp, M2)
         end
         NCountM[gen+1] = sum(Ntm)
         NCountF[gen+1] = sum(Ntf)
     end
-    return [NCountF, NCountM]
+    dc_ = [NCountF, NCountM]
+    return dc_
 end
 
 
@@ -245,7 +266,7 @@ E_Make = function (; M=4, homing=:b, c_m=0.9, j_m=035, a_m=0, b_m=0.001, c_f=0.9
     return e
 end
 
-Fitness_input1=function(;sigma=0.02,s=1,h=1,hN=0.03,hDR=0.03,show=true,M=4,hm=0,f=12,non_func=["D","N","O"])
+Fitness_input1=function(;sigma=0.02,s=1,h=1,hN=0.03,hDR=0.03,show=true,M=4,hm=0,f=12,inter=true,wf_nb=[],non_func=["D","N","O"])
     M2=Int(M*(M+1)/2)
     wm=ones(M2)
     if M==5
@@ -311,7 +332,11 @@ Fitness_input1=function(;sigma=0.02,s=1,h=1,hN=0.03,hDR=0.03,show=true,M=4,hm=0,
                 
     end
     namesF=["Males","Females","Formula (female)"]
-    wf=ones(M2);wf[wf0.<=0] .=0
+   if inter
+        wf=ones(M2)
+        wf[wf0.<=0] .=0
+    else wf=wf_nb
+    end
     di=occursin.("D",namesG);wm[di].=1-hm
     
     ff=ones(M2,M2).*f
@@ -337,5 +362,8 @@ end
 TimePerc=function(n;maxt=300,perc=0.5)
     n0=n[1]
     tt=filter(x->n[x]<=n0*perc,1:maxt)
+    if length(tt)==0
+        tt=[1,1]
+    end
     return first(tt),last(tt),last(tt)-first(tt)
 end
