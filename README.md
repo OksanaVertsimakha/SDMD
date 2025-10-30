@@ -31,14 +31,12 @@ DataFrames v1.7.0
 Distributions v0.25.120
 JLD2 v0.5.13
 NBInclude v2.4.0
-PrettyTables v2.4.0
 ProgressMeter v1.10.4
 SplitApplyCombine v1.2.3
 StatsBase v0.34.5
 Random
-Statistics v1.10.0
 ```
-Once the packages are installed, the following code should be run o initiate the environment (should be run at the start of each session):
+Once the packages are installed, the following code should be run to initiate the environment (should be run at the start of each session):
 ```
 using Pkg
 Pkg.activate("./Environment/")
@@ -49,6 +47,9 @@ To use the modelling functions, run
 include("SDMDModel.jl")
 ```
 The code and instructions are also provided in the SDMDSimulations.ipynb file.
+```
+Alternatively, the model can be run with a single jupyter notebook file SDMD_code.ipynb. The code of the file contains all the required packages upload instructions as well as the model's functions, and can be executed from the user's environment.
+
 ## User notes
 The SDMDModel.ipynb is a jupyter notebook that contains the code for the model as described in the paper as well as all supplementary functions.
 
@@ -57,6 +58,6 @@ The SDMDSimulations.ipynb is a jupyter notebook that contains the code used to g
 ## Timing
 Installation is not expected to take more than 5 minutes
 
-For both ideaised and empirical parameters, the simulations take less than 2 minultes in total (100 repetitions for each strategy). Depending on the number of repetitions, the simulations can take few minuted longer.
+For both ideaised and empirical parameters, the simulations take less than 2 minutes in total (100 repetitions for each strategy). Depending on the number of runs, the simulations can take few minutes longer.
 
 
