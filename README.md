@@ -46,9 +46,10 @@ To use the modelling functions, run
 ```
 include("SDMDModel.jl")
 ```
-The code and instructions are also provided in the SDMDSimulations.ipynb file.
+The code and instructions along with the code to generate figures from the paper are also provided in the SDMDSimulations.ipynb file.
 ```
-Alternatively, the model can be run with a single jupyter notebook file SDMD_code.ipynb. The code of the file contains all the required packages upload instructions as well as the model's functions, and can be executed from the user's environment.
+Alternatively, the model can be run with a single jupyter notebook file SDMDcode.ipynb. The code of the file contains all the required packages upload instructions as well as the model's functions, and can be executed from the user's environment.
+
 
 ## User notes
 The SDMDModel.ipynb is a jupyter notebook that contains the code for the model as described in the paper as well as all supplementary functions.
