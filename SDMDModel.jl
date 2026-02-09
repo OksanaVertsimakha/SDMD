@@ -329,7 +329,7 @@ Fitness_input1=function(;sigma=0.02,s=1,h=1,hN=0.03,hDR=0.03,show=true,M=4,hm=0,
     ff=ones(M2,M2).*f
     for j in 1:M2 for i in 1:M2 ff[i,j]=wf0[i]*wm[j]*f;end;end
     if show 
-        pretty_table([wm wf0 wfth ],header=namesF,tf=tf_borderless,row_labels=namesG,alignment=:l)
+        pretty_table([wm wf0 wfth ],table_format = TextTableFormat(borders = text_table_borders__borderless),column_labels=namesF,row_labels=namesG,alignment=:l)
     end
     return wm,wf,ff
 end
@@ -354,5 +354,6 @@ TimePerc=function(n;maxt=300,perc=0.5)
     end
     return first(tt),last(tt),last(tt)-first(tt)
 end
+
 
 
